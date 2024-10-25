@@ -1,163 +1,151 @@
-# Telegram Advanced Message Sender
 
-This script automates sending welcome messages to users from a CSV file using two Telegram profiles. It is designed to handle messaging limits, rate restrictions, and errors, while balancing the load between profiles.
+# 📬 Telegram Welcome Message Sender Configuration Guide
+
+Welcome to the setup guide for the **Advanced Telegram Message Sender**. This guide will walk you through the process of configuring and running the script to ensure smooth communication with your Telegram contacts.
+
+---
 
 ## Table of Contents
-1. [Overview](#overview)
-2. [Installation and Setup](#installation-and-setup)
-3. [Configuration](#configuration)
-4. [Script Structure and Functionality](#script-structure-and-functionality)
-5. [Usage](#usage)
-6. [Error Handling](#error-handling)
-7. [Logging](#logging)
-8. [FAQs and Troubleshooting](#faqs-and-troubleshooting)
+
+1. [Installation](#installation)
+2. [Project Structure](#project-structure)
+3. [Configuration Files](#configuration-files)
+   - [telegram_profiles.json](#telegram_profilesjson)
+   - [messages.txt](#messagestxt)
+   - [telegramy.csv](#telegramycsv)
+4. [Running the Script](#running-the-script)
+5. [Expected Output](#expected-output)
+6. [Troubleshooting](#troubleshooting)
 
 ---
 
-## Overview
-**Telegram Advanced Message Sender** automates sending messages through two Telegram profiles, optimizing for rate limits and preventing duplicate messages to the same user. Each profile alternates sending messages, handling sending failures, restrictions, and other messaging errors.
+### 1. Installation
 
-**Key Features:**
-- **Multi-Profile Sending:** Balances message load across two profiles.
-- **Error and Limit Management:** Handles errors like rate limits and logs detailed information for troubleshooting.
-- **Real-Time Feedback:** Color-coded terminal output for intuitive feedback.
-- **CSV and Text File Integration:** Reads users from a CSV file and messages from a text file for modularity.
+To get started, ensure you have **Python 3.7+** installed on your machine. Follow these steps to set up the required dependencies.
+
+1. Clone or download the project files to your local machine.
+2. Open a terminal in the project directory and install dependencies:
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+3. Dependencies include:
+    - `telethon`: For interacting with Telegram's API.
+    - `colorama`: For colored terminal output.
+    - `asyncio`, `random`, and `sys`: Standard Python libraries for asynchronous operations, randomness, and system exit handling.
 
 ---
 
-## Installation and Setup
+### 2. Project Structure
 
-### Prerequisites
-- Python 3.8 or later
-- `telethon` library for Telegram client communication
-- `colorama` library for colorful terminal output
+Ensure your project directory contains the following essential files:
 
-### Installation
-To install the required dependencies:
-```bash
-pip install telethon colorama
+```plaintext
+telegram_message_sender/
+├── main.py                # Main script file
+├── telegram_profiles.json # Profiles configuration file
+├── messages.txt           # List of welcome messages
+├── telegramy.csv          # Usernames to message
+└── telegram_client.log    # Log file for errors and events
 ```
 
-### Setup
-1. **API Credentials**: Make sure to have API IDs, API hashes, and phone numbers for both Telegram profiles.
-2. **CSV File**: Prepare a CSV file (`telegramy.csv`) containing usernames to whom you want to send messages.
-3. **Message File**: Create a text file (`messages.txt`) with one message per line.
-
 ---
 
-## Configuration
+### 3. Configuration Files
 
-This script uses profiles loaded from a JSON file (`telegram_profiles.json`). Example JSON structure:
+#### telegram_profiles.json
+
+This file holds the configuration for the Telegram profiles used in sending messages. Each profile includes its unique API ID, API Hash, and phone number.
+
+**Example JSON Structure:**
 
 ```json
 {
-    "PROFILES": [
-        {
-            "API_ID": "YOUR_API_ID_1",
-            "API_HASH": "YOUR_API_HASH_1",
-            "PHONE_NUMBER": "YOUR_PHONE_NUMBER_1",
-            "SESSION_NAME": "session_profile_1",
-            "COLOR": "LIGHTBLUE_EX",
-            "NAME": "Profile 1"
-        },
-        {
-            "API_ID": "YOUR_API_ID_2",
-            "API_HASH": "YOUR_API_HASH_2",
-            "PHONE_NUMBER": "YOUR_PHONE_NUMBER_2",
-            "SESSION_NAME": "session_profile_2",
-            "COLOR": "LIGHTRED_EX",
-            "NAME": "Profile 2"
-        }
-    ]
+  "PROFILES": [
+    {
+      "API_ID": "123456",
+      "API_HASH": "abc123def456",
+      "PHONE_NUMBER": "+1234567890",
+      "SESSION_NAME": "session1",
+      "NAME": "Profile 1",
+      "COLOR": "\u001b[32m"
+    },
+    {
+      "API_ID": "654321",
+      "API_HASH": "654def321abc",
+      "PHONE_NUMBER": "+0987654321",
+      "SESSION_NAME": "session2",
+      "NAME": "Profile 2",
+      "COLOR": "\u001b[34m"
+    }
+  ]
 }
 ```
 
-Load the profiles in the script with:
-```python
-import json
+- **API_ID** and **API_HASH** are provided by Telegram (register at [Telegram API](https://my.telegram.org/)).
+- **PHONE_NUMBER**: The number associated with each Telegram profile.
+- **SESSION_NAME**: Unique name for the session file.
+- **NAME**: Display name for the profile.
+- **COLOR**: Color for each profile’s terminal output.
 
-# Load profiles from JSON file
-with open('telegram_profiles.json', 'r') as file:
-    profiles_data = json.load(file)
-    PROFILES = profiles_data["PROFILES"]
+#### messages.txt
+
+Contains the welcome messages to be sent. Place each message on a new line. The script will randomly select one for each user.
+
+**Example:**
+
+```plaintext
+Welcome! We're excited to have you here.
+Hi there! Looking forward to connecting.
+Thanks for joining us! Let's keep in touch.
+```
+
+#### telegramy.csv
+
+A CSV file listing the usernames of individuals to whom messages will be sent. Ensure each username is on a new line in the first column.
+
+**Example:**
+
+```plaintext
+username1
+username2
+username3
 ```
 
 ---
 
-## Script Structure and Functionality
+### 4. Running the Script
 
-1. **`display_welcome()`**
-   Displays a welcome message with colored formatting to signal the start of the messaging process.
+Run the script using the following command:
 
-2. **`load_welcome_messages(file_path)`**
-   Loads welcome messages from an external file. If the file doesn’t exist or is empty, an error message is displayed.
-
-3. **`load_users(csv_file_path)`**
-   Reads usernames from the CSV file. If the file is missing, it creates an empty one.
-
-4. **`remove_user_from_csv(csv_file_path, user_to_remove)`**
-   Removes a processed user from the CSV file, ensuring no duplicate messages are sent.
-
-5. **Class: `TelegramSender`**
-   Manages Telegram interactions for each profile. Responsible for connecting, sending messages, handling rate limits, and error tracking.
-
-   - **Methods**:
-      - **`__init__(...)`**: Initializes credentials and sets up error counters and tracking.
-      - **`start_client()`**: Authenticates the client with Telegram, prompting for a verification code if unauthorized.
-      - **`get_user_entity(username)`**: Retrieves the Telegram entity for a username.
-      - **`conversation_exists(entity)`**: Checks if a conversation already exists with a user.
-      - **`send_welcome_message(username, messages)`**: Sends a message if no prior conversation exists, updating counters and handling errors.
-
----
-
-## Usage
-
-### Running the Script
-To start the script:
 ```bash
-python script_name.py
+python main.py
 ```
 
-The script:
-- Loads all users and messages.
-- Alternates message sending between profiles.
-- Displays real-time status and error handling in the terminal.
+The script will display a welcome graphic and begin processing users from the CSV file, alternating between the profiles configured in `telegram_profiles.json`. Messages will be sent based on availability, balancing limits, and errors.
 
-### Stopping the Script
-Press `Ctrl+C` to exit gracefully, providing a summary of sent messages and runtime.
+### 5. Expected Output
 
----
+The script produces a colorful and informative terminal output with the following details:
 
-## Error Handling
-
-The script manages errors and provides feedback:
-- **FloodWaitError**: Pauses for the required time when rate limits are hit.
-- **PeerIdInvalidError/UserIdInvalidError**: Skips invalid or restricted usernames.
-- **File Handling Errors**: Checks for missing or empty CSV and message files.
+- **Message Delivery Status**: Shows successful messages and existing conversations, with a count of messages sent per profile.
+- **Errors and Rate Limits**: Displays any failures and rate limits encountered, pausing until restrictions lift.
+- **Completion Summary**: Shows a final count of messages sent from each profile and the total runtime.
 
 ---
 
-## Logging
+### 6. Troubleshooting
 
-Logs are recorded in `telegram_client.log`, capturing:
-- Profile authentication steps
-- Message sending status
-- Errors and rate limit information
+**Common Issues and Solutions:**
+
+- **Rate Limit Exceeded**: If a profile is restricted, the script will switch to an alternate profile. Once both profiles are restricted, the process stops.
+- **Invalid Username**: If a username is invalid, it’s logged as a warning and skipped.
+- **No Users to Process**: Ensure `telegramy.csv` contains valid usernames.
+- **Missing Files**: The script will halt if critical files (`telegram_profiles.json`, `messages.txt`, or `telegramy.csv`) are missing. Ensure all files are in the project directory.
+
+For further issues, consult the `telegram_client.log` for detailed logs.
 
 ---
 
-## FAQs and Troubleshooting
-
-### Why aren’t messages being sent?
-1. Verify `telegramy.csv` contains usernames.
-2. Ensure `messages.txt` has messages.
-3. Confirm API credentials are correct.
-
-### How to adjust delay between messages?
-Modify the delay in the main loop:
-```python
-await asyncio.sleep(random.uniform(1, 3))  # Adjust as needed
-```
-
-### What if a profile gets restricted?
-Profiles may be rate-limited if too many messages are sent rapidly. The script will automatically retry after a wait period.
+🎉 **Congratulations! You’re now ready to automate your Telegram messages.**
